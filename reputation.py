@@ -109,7 +109,7 @@ def propagate_from_items(graph):
             for m in it.msgs:
                 if m.user != u:
                     grades.append(m.grade)
-                    variances.append(m.stdev ** 2.0)
+                    variances.append(m.variance)
             variances = np.array(variances)
             weights = 1.0 / (BASIC_PRECISION + variances)
             weights /= np.sum(weights)
@@ -117,8 +117,7 @@ def propagate_from_items(graph):
             msg.item = it
             msg.grade = aggregate(grades, weights=weights)
             # Now I need to estimate the standard deviation of the grade. 
-            variance = np.sum(variances * weights * weights)
-            msg.stdev = variance ** 0.5
+            msg.variance = np.sum(variances * weights * weights)
             u.msgs.append(msg)
 
 
@@ -140,7 +139,7 @@ def propagate_from_users(graph):
             if DEBIAS:
                 for m in u.msgs:
                     if m.item != it:
-                        weights.append(1 / (BASIC_PRECISION + m.stdev ** 2))
+                        weights.append(1 / (BASIC_PRECISION + m.variance))
                         given_grade = u.grade[m.item]
                         other_grade = m.grade
                         biases.append(given_grade - other_grade)
@@ -151,15 +150,13 @@ def propagate_from_users(graph):
             msg.grade = u.grade[it] - bias
             # Estimates the standard deviation of the user, from the
             # other judged items.
-            stdev_estimates = []
+            variance_estimates = []
             weights = []
             for m in u.msgs:
                 if m.item != it:
-                    stdev_estimates.append((msg.grade - m.grade) ** 2.0)
-                    weights.append(1.0 / (BASIC_PRECISION + m.stdev ** 2.0))
-            stdev_estimate = aggregate(stdev_estimates, weights=weights) ** 0.5
-            msg.stdev = stdev_estimate
-            msg.weight = np.sum(weights)
+                    variance_estimates.append((msg.grade - m.grade) ** 2.0)
+                    weights.append(1.0 / (BASIC_PRECISION + m.variance))
+            msg.variance = aggregate(variance_estimates, weights=weights)
             # The message is ready for enqueuing.
             it.msgs.append(msg)
                 
@@ -171,7 +168,7 @@ def aggregate_item_messages(graph):
         weights = []
         for m in it.msgs:
                 grades.append(m.grade)
-                weights.append(m.weight)
+                weights.append(1.0 / (BASIC_PRECISION + m.variance))
         item_values[it] = aggregate(grades, weights=weights)
     return item_values
 
@@ -185,7 +182,7 @@ def evaluate_items(graph, n_iterations=10):
             m = Msg()
             m.user = u
             m.grade = u.grade[it]
-            m.stdev = 1.0
+            m.variance = 1.0
             it.msgs.append(m)
     # Does the propagation iterations.
     for i in range(n_iterations):
