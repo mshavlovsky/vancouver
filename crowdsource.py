@@ -26,8 +26,8 @@ graph = graph_builder.Graph(items, users)
 values_via_avg = average_voting.evaluate_items(graph)
 print "Via average: ", eval_quality(values_via_avg)
 # Evaluates this according to the reputation system.
-# values_via_rep = reputation.evaluate_items(graph)
-
+values_via_rep = reputation.evaluate_items(graph)
+print "Via reputation:", eval_quality(values_via_rep)
 
 
 
