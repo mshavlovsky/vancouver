@@ -6,7 +6,8 @@ import unittest
 
 # Do we debias grades?
 DEBIAS = True
-
+# Aggregation using median?
+AGGREGATE_BY_MEDIAN = False
 # Basic precision, as multiple of standard deviation.
 BASIC_PRECISION = 0.1
 
@@ -23,11 +24,16 @@ def avg_evaluate_items(graph):
 
 def aggregate(v, weights=None):
     """Aggregates using either average or median."""
-    # TODO(luca): aggregate using medians as well.
-    if weights is not None:
-        return np.average(v, weights=weights)
+    if AGGREGATE_BY_MEDIAN:
+        if weights is not None:
+            return median_aggregate(v, weights=weights)
+        else:
+            return median_aggregate(v)
     else:
-        return np.average(v)
+        if weights is not None:
+            return np.average(v, weights=weights)
+        else:
+            return np.average(v)
 
 
 def median_aggregate(values, weights=None):
@@ -48,7 +54,7 @@ def median_aggregate(values, weights=None):
     vv.sort()
     v = np.array([x for x, _ in vv])
     w = np.array([y for _, y in vv])
-    print 'v', v, 'w', w
+    # print 'v', v, 'w', w
     # At this point, the values are sorted, they all have non-zero weight,
     # and there are at least two values.
     half = np.sum(w) / 2.0
@@ -57,26 +63,26 @@ def median_aggregate(values, weights=None):
     while i < len(v) and below + w[i] < half:
         below += w[i]
         i += 1
-    print 'i', i, 'half', half, 'below', below
+    # print 'i', i, 'half', half, 'below', below
     if half < below + 0.5 * w[i]:
-        print 'below'
+        # print 'below'
         if i == 0:
             return v[0]
         else:
-            alpha = half - below + 0.5 * w[i - 1]
+            alpha = half - below
             beta = below + 0.5 * w[i] - half
-            print 'alpha', alpha, 'beta', beta
-            return (beta * v[i - 1] + alpha * v[i]) / (alpha + beta)
+            # print 'alpha', alpha, 'beta', beta
+            return (beta * (v[i] + v[i - 1]) / 2.0 + alpha * v[i]) / (alpha + beta)
     else:
-        print 'above'
+        # print 'above'
         if i == len(v) - 1:
-            print 'last'
+            # print 'last'
             return v[i]
         else:
             alpha = half - below - 0.5 * w[i]
-            beta = below + w[i] - half + 0.5 * w[i + 1]
-            print 'alpha', alpha, 'beta', beta
-            return (beta * v[i] + alpha * v[i + 1]) / (alpha + beta)
+            beta = below + w[i] - half
+            # print 'alpha', alpha, 'beta', beta
+            return (beta * v[i] + alpha * (v[i] + v[i + 1]) / 2.0) / (alpha + beta)
 
 
 class Msg():
@@ -191,17 +197,17 @@ def evaluate_items(graph, n_iterations=10):
 
 class TestMedian(unittest.TestCase):
     
-    #def test_median_0(self):
-    #    values = [1.0, 3.0, 2.0]
-    #    weights = [1.0, 1.0, 1.0]
-    #    m = median_aggregate(values, weights=weights)
-    #    self.assertAlmostEqual(m, 2.0, 4)
+    def test_median_0(self):
+        values = [1.0, 3.0, 2.0]
+        weights = [1.0, 1.0, 1.0]
+        m = median_aggregate(values, weights=weights)
+        self.assertAlmostEqual(m, 2.0, 4)
 
-    #def test_median_1(self):
-    #    values = [1.0, 3.0, 2.0]
-    #    weights = [1.0, 1.0, 2.0]
-    #    m = median_aggregate(values, weights=weights)
-    #    self.assertAlmostEqual(m, 2.0, 4)
+    def test_median_1(self):
+        values = [1.0, 3.0, 2.0]
+        weights = [1.0, 1.0, 2.0]
+        m = median_aggregate(values, weights=weights)
+        self.assertAlmostEqual(m, 2.0, 4)
 
     def test_median_2(self):
         values = [1.0, 3.0, 2.0]
@@ -209,6 +215,11 @@ class TestMedian(unittest.TestCase):
         m = median_aggregate(values, weights=weights)
         self.assertAlmostEqual(m, 2.5, 4)
 
+    def test_median_3(self):
+        values = [1.0, 3.0, 2.0]
+        weights = [1.0, 2.0, 2.0]
+        m = median_aggregate(values, weights=weights)
+        self.assertAlmostEqual(m, 2.25, 4)
 
 
 
