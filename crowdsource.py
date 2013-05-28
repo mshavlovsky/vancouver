@@ -9,25 +9,35 @@ import numpy as np
 
 N_USERS = 50
 N_ITEMS = 50
-BIAS_STDEV = 0.2
-EVAL_STDEV = 0.2
+N_REVIEWS = 10
+BIAS_STDEV = 0.8
+EVAL_STDEV = 0.8
 
 def eval_quality(values):
     diffs = [values[it] - it.q for it in items]
     return np.std(diffs)
 
 # Builds a graph between users and items.
-users = [user_model.User(bias_stdev=BIAS_STDEV, eval_stdev=BIAS_STDEV)
-         for u in range(N_USERS)]
-items = [item_model.Item() for i in range(N_ITEMS)]
-graph = graph_builder.Graph(items, users)
 
-# Evaluates this according to simple average. 
-values_via_avg = average_voting.evaluate_items(graph)
-print "Via average: ", eval_quality(values_via_avg)
-# Evaluates this according to the reputation system.
-values_via_rep = reputation.evaluate_items(graph)
-print "Via reputation:", eval_quality(values_via_rep)
+avs = []
+rvs = []
+for i in range(10):
+    users = [user_model.User(bias_stdev=BIAS_STDEV, eval_stdev=BIAS_STDEV, bimodal=True)
+             for u in range(N_USERS)]
+    items = [item_model.Item() for i in range(N_ITEMS)]
+    graph = graph_builder.Graph(items, users, reviews=N_REVIEWS)
+    # Evaluates this according to simple average. 
+    values_via_avg = average_voting.evaluate_items(graph)
+    av = eval_quality(values_via_avg)
+    print "Via average: ", av
+    avs.append(av)
+    # Evaluates this according to the reputation system.
+    values_via_rep = reputation.evaluate_items(graph)
+    rv = eval_quality(values_via_rep)
+    print "Via reputation:", rv
+    rvs.append(rv)
+print "Mean via average:", np.average(avs)
+print "Mean via reputation:", np.average(rvs)
 
 
 
