@@ -9,7 +9,7 @@ import numpy as np
 
 N_USERS = 50
 N_ITEMS = 50
-N_REVIEWS = 10
+N_REVIEWS = 5
 BIAS_STDEV = 0.8
 EVAL_STDEV = 0.8
 
