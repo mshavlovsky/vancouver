@@ -7,7 +7,7 @@ import unittest
 # Do we debias grades?
 DEBIAS = True
 # Aggregation using median?
-AGGREGATE_BY_MEDIAN = False
+AGGREGATE_BY_MEDIAN = True
 # Basic precision, as multiple of standard deviation.
 BASIC_PRECISION = 0.1
 
