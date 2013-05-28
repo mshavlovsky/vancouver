@@ -10,8 +10,9 @@ import numpy as np
 N_USERS = 50
 N_ITEMS = 50
 N_REVIEWS = 5
-BIAS_STDEV = 0.8
-EVAL_STDEV = 0.8
+BIAS_STDEV = 0.2
+EVAL_STDEV = 0.2
+FRACTION_BAD = 0.15
 
 def eval_quality(values):
     diffs = [values[it] - it.q for it in items]
@@ -22,7 +23,7 @@ def eval_quality(values):
 avs = []
 rvs = []
 for i in range(10):
-    users = [user_model.User(bias_stdev=BIAS_STDEV, eval_stdev=BIAS_STDEV, bimodal=True)
+    users = [user_model.User(bias_stdev=BIAS_STDEV, eval_stdev=EVAL_STDEV, bimodal=True, frac=FRACTION_BAD)
              for u in range(N_USERS)]
     items = [item_model.Item() for i in range(N_ITEMS)]
     graph = graph_builder.Graph(items, users, reviews=N_REVIEWS)
