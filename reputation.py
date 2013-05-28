@@ -21,7 +21,7 @@ def avg_evaluate_items(graph):
 def aggregate(v, weights=None):
     """Aggregates using either average or median."""
     # TODO(luca): aggregate using medians as well.
-    if weights:
+    if weights is not None:
         return np.average(v, weights=weights)
     else:
         return np.average(v)
@@ -47,22 +47,20 @@ def propagate_from_items(graph):
         for u in it.users:
             grades = []
             weights = []
+            variances = []
             for m in it.msgs:
                 if m.user != u:
                     grades.append(m.grade)
-                    weights.append(m.weight)
+                    variances.append(m.stdev ** 2.0)
+            variances = np.array(variances)
+            weights = 1.0 / (BASIC_PRECISION + variances)
+            weights /= np.sum(weights)
             msg = Msg()
             msg.item = it
             msg.grade = aggregate(grades, weights=weights)
-            # Computes the standard deviation of the other votes.
-            tot_n = 0.0
-            tot_sq = 0.0
-            for m in it.msgs:
-                if m.user != u:
-                    tot_n += m.weight
-                    tot_sq += (m.grade - msg.grade) ** 2.0
-            msg.stdev = (tot_sq / tot_n) ** 0.5
-            msg.weight = np.sum(weights)
+            # Now I need to estimate the standard deviation of the grade. 
+            variance = np.sum(variances * weights * weights)
+            msg.stdev = variance ** 0.5
             u.msgs.append(msg)
 
 
@@ -71,8 +69,8 @@ def propagate_from_users(graph):
     # First, clears the messages received in the items.
     for it in graph.items:
         it.msgs = []
-    # Sends information from users to items.  The information to be sent is 
-    # simply a grade, with its weight.
+    # Sends information from users to items.  
+    # The information to be sent is a grade, and an estimated standard deviation.
     for u in graph.users:
         for it in u.items:
             # The user looks at the messages from other items, and computes
@@ -84,7 +82,7 @@ def propagate_from_users(graph):
             if DEBIAS:
                 for m in u.msgs:
                     if m.item != it:
-                        weights.append(m.weight)
+                        weights.append(1 / (BASIC_PRECISION + m.stdev ** 2))
                         given_grade = u.grade[m.item]
                         other_grade = m.grade
                         biases.append(given_grade - other_grade)
@@ -93,20 +91,17 @@ def propagate_from_users(graph):
                 bias = 0.0
             # The grade is the grade given, de-biased. 
             msg.grade = u.grade[it] - bias
-            # Now we compute the ratio between the difference between grade
-            # given (minus bias) and grade received, and standard deviation
-            # of other grades.  In other words, we compute on average how many
-            # standard deviations the user if away from the consensus judgement
-            # on the items.  We use this to compute the weight of the user
-            # grade.
-            stdev_multiples = []
+            # Estimates the standard deviation of the user, from the
+            # other judged items.
+            stdev_estimates = []
             weights = []
             for m in u.msgs:
                 if m.item != it:
-                    stdev_multiples.append(((msg.grade - m.grade) / m.stdev) ** 2.0)
-                    weights.append(m.weight)
-            stdev_multiple = aggregate(stdev_multiples, weights=weights) ** 0.5
-            msg.weight = 1.0 / (BASIC_PRECISION + stdev_multiple)
+                    stdev_estimates.append((msg.grade - m.grade) ** 2.0)
+                    weights.append(1.0 / (BASIC_PRECISION + m.stdev ** 2.0))
+            stdev_estimate = aggregate(stdev_estimates, weights=weights) ** 0.5
+            msg.stdev = stdev_estimate
+            msg.weight = np.sum(weights)
             # The message is ready for enqueuing.
             it.msgs.append(msg)
                 
@@ -132,7 +127,7 @@ def evaluate_items(graph, n_iterations=10):
             m = Msg()
             m.user = u
             m.grade = u.grade[it]
-            m.weight = 1.0
+            m.stdev = 1.0
             it.msgs.append(m)
     # Does the propagation iterations.
     for i in range(n_iterations):
