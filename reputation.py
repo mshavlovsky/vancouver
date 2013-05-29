@@ -9,7 +9,7 @@ DEBIAS = True
 # Aggregation using median?
 AGGREGATE_BY_MEDIAN = True
 # Basic precision, as multiple of standard deviation.
-BASIC_PRECISION = 0.1
+BASIC_PRECISION = 0.001
 
 
 class User:
@@ -140,7 +140,6 @@ def propagate_from_items(graph):
         # Total weight
         for u in it.users:
             grades = []
-            weights = []
             variances = []
             for m in it.msgs:
                 if m.user != u:
@@ -306,6 +305,7 @@ def plot_graph(graph):
     plt.plot(x, y, 'ro')
     plt.title('item error, est vs true')
     plt.show()
+
 
 class TestMedian(unittest.TestCase):
     

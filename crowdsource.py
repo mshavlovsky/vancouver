@@ -23,7 +23,7 @@ def eval_quality(values):
 avs = []
 rvs = []
 for i in range(1):
-    users = [user_model.User(bias_stdev=BIAS_STDEV, eval_stdev=EVAL_STDEV, bimodal=True, frac=FRACTION_BAD)
+    users = [user_model.User(bias_stdev=BIAS_STDEV, eval_stdev=EVAL_STDEV, bimodal=False, frac=FRACTION_BAD)
              for u in range(N_USERS)]
     items = [item_model.Item() for i in range(N_ITEMS)]
     graph = graph_builder.Graph(items, users, reviews=N_REVIEWS)
