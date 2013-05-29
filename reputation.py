@@ -228,7 +228,7 @@ def aggregate_item_messages(graph):
         item_values[it] = it.grade
         # Debug
         for i, m in enumerate(it.msgs):
-            stdev_vs_error.append((variances[i] ** 0.5, (m.grade - it.grade) ** 2.0))
+            stdev_vs_error.append((variances[i] ** 0.5, abs(m.grade - it.grade)))
             weight_vs_error.append((weights[i], abs(it.q - m.grade)))
     return item_values, all_weights, weight_vs_error, stdev_vs_error
 
