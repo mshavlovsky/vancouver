@@ -4,6 +4,8 @@ from random import choice
 class Graph:
     
     def __init__(self, items, users, reviews=5):
+        """Initializes a random graph between the specified users
+        and items, for the specified number of reviews."""
         self.items = items
         self.users = users
         self.n_reviews = reviews
