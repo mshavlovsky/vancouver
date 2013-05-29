@@ -5,11 +5,11 @@ import unittest
 
 
 # Do we debias grades?
-DEBIAS = True
+DEBIAS = False
 # Aggregation using median?
-AGGREGATE_BY_MEDIAN = True
+AGGREGATE_BY_MEDIAN = False
 # Basic precision, as multiple of standard deviation.
-BASIC_PRECISION = 0.001
+BASIC_PRECISION = 0.5
 
 
 class User:
@@ -152,7 +152,17 @@ def propagate_from_items(graph):
             msg.item = it
             msg.grade = aggregate(grades, weights=weights)
             # Now I need to estimate the standard deviation of the grade. 
-            msg.variance = np.sum(variances * weights * weights)
+            if True:
+                # This is a way to estimate the variance from the user-declared variances.
+                msg.variance = np.sum(variances * weights * weights)
+            else:
+                # This is a way to estimate the variance from the actual data.
+                diff_list = []
+                for m in it.msgs:
+                    if m.user != u:
+                        diff_list.append(m.grade - msg.grade)
+                diff_list = np.array(diff_list)
+                msg.variance = np.sum(diff_list * diff_list * weights)
             u.msgs.append(msg)
 
 
@@ -241,7 +251,7 @@ def aggregate_user_messages(graph):
         u.variance = aggregate(variance_estimates, weights=weights)
    
     
-def evaluate_items(graph, n_iterations=20, do_plots=False):
+def evaluate_items(graph, n_iterations=50, do_plots=False):
     """Evaluates items using the reputation system iterations."""
     # Builds the initial messages from users to items. 
     for it in graph.items:
