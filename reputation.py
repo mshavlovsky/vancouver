@@ -5,11 +5,11 @@ import unittest
 
 
 # Do we debias grades?
-DEBIAS = False
+DEBIAS = True
 # Aggregation using median?
-AGGREGATE_BY_MEDIAN = False
+AGGREGATE_BY_MEDIAN = True
 # Basic precision, as multiple of standard deviation.
-BASIC_PRECISION = 0.5
+BASIC_PRECISION = 10.0
 
 
 class User:
@@ -210,6 +210,9 @@ def aggregate_item_messages(graph):
     """Aggregates the information on an item, computing the grade
     and the variance of the grade."""
     item_values = {}
+    all_weights = [] # debug
+    weight_vs_error = []
+    stdev_vs_error = []
     for it in graph.items:
         grades = []
         variances = []
@@ -219,10 +222,15 @@ def aggregate_item_messages(graph):
         variances = np.array(variances)
         weights = 1.0 / (BASIC_PRECISION + variances)
         weights /= np.sum(weights)
+        all_weights.append(weights)
         it.grade = aggregate(grades, weights=weights)
         it.variance = np.sum(variances * weights * weights)
         item_values[it] = it.grade
-    return item_values
+        # Debug
+        for i, m in enumerate(it.msgs):
+            stdev_vs_error.append((variances[i] ** 0.5, (m.grade - it.grade) ** 2.0))
+            weight_vs_error.append((weights[i], abs(it.q - m.grade)))
+    return item_values, all_weights, weight_vs_error, stdev_vs_error
 
 
 def aggregate_user_messages(graph):
@@ -251,7 +259,7 @@ def aggregate_user_messages(graph):
         u.variance = aggregate(variance_estimates, weights=weights)
    
     
-def evaluate_items(graph, n_iterations=50, do_plots=False):
+def evaluate_items(graph, n_iterations=20, do_plots=False):
     """Evaluates items using the reputation system iterations."""
     # Builds the initial messages from users to items. 
     for it in graph.items:
@@ -268,18 +276,18 @@ def evaluate_items(graph, n_iterations=50, do_plots=False):
         propagate_from_users(graph)
     # Does the final aggregation step.
     aggregate_user_messages(graph)
-    r = aggregate_item_messages(graph)
+    r, ws, w_vs_e, s_vs_e = aggregate_item_messages(graph)
     if do_plots:
-        plot_graph(graph)
+        plot_graph(graph, ws, w_vs_e, s_vs_e)
     return r
 
 
-def plot_graph(graph):
+def plot_graph(graph, ws, w_vs_e, s_vs_e):
     from matplotlib import pyplot as plt
     def unzip(l):
         return [x for x, _ in l], [x for _, x in l]
     # Plots user variance, estimated vs. true.
-    plt.subplot(2,2,1)
+    plt.subplot(2,3,1)
     var_plot = []
     for u in graph.users:
         var_plot.append((u.prec, u.variance ** 0.5))
@@ -288,7 +296,7 @@ def plot_graph(graph):
     plt.plot(x, y, 'ro')
     plt.title('user stdev, est vs true')
     # Plots user bias, estimated vs. true. 
-    plt.subplot(2,2,2)
+    plt.subplot(2,3,2)
     var_plot = []
     for u in graph.users:
         var_plot.append((u.true_bias, u.bias))
@@ -297,7 +305,7 @@ def plot_graph(graph):
     plt.plot(x, y, 'ro')
     plt.title('user bias, est vs true')
     # Plots item true value vs. estimated.
-    plt.subplot(2,2,3)
+    plt.subplot(2,3,4)
     var_plot = []
     for it in graph.items:
         var_plot.append((it.q, it.grade))
@@ -306,7 +314,7 @@ def plot_graph(graph):
     plt.plot(x, y, 'ro')
     plt.title('item value, est vs true')
     # Plots item error vs. item variance. 
-    plt.subplot(2,2,4)
+    plt.subplot(2,3,5)
     var_plot = []
     for it in graph.items:
         var_plot.append((it.variance ** 0.5, abs(it.grade - it.q)))
@@ -314,6 +322,18 @@ def plot_graph(graph):
     x, y = unzip(var_plot)
     plt.plot(x, y, 'ro')
     plt.title('item error, est vs true')
+    # Plots the weight distribution.
+    plt.subplot(2,3,3)
+    y, x = unzip(s_vs_e)
+    plt.plot(x, y, 'ro')
+    # plt.xscale('log')
+    plt.title('stdev vs. error')
+    # Plots weight vs. error.
+    plt.subplot(2,3,6)
+    y, x = unzip(w_vs_e)
+    plt.plot(x, y, 'ro')
+    plt.xscale('log')
+    plt.title('weight vs. error')
     plt.show()
 
 
