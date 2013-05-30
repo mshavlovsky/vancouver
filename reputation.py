@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# Copyright Luca de Alfaro, 2013. 
 
 import numpy as np
 import unittest
