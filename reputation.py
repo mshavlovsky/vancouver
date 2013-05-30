@@ -6,7 +6,7 @@ import unittest
 
 # Do we debias grades?
 DEBIAS = False
-# Aggregation using median?
+# Aggregation using median?  Generally a bad idea.
 AGGREGATE_BY_MEDIAN = False
 # Basic precision, as multiple of standard deviation.
 BASIC_PRECISION = 0.0001
@@ -221,7 +221,22 @@ class Graph:
                 variance_estimates.append((it_grade - m.grade) ** 2.0)
                 weights.append(1.0 / (BASIC_PRECISION + m.variance))
             u.variance = aggregate(variance_estimates, weights=weights)
-    
+            
+            
+    def evaluate_users(self):
+        """Evaluates users by comparing their variance with the one computed by
+        giving grades at random."""
+        # Computes the standard deviation of all grades ever given.
+        all_grades = []
+        for u in self.users:
+            all_grades.extend(u.grade.values())
+        overall_stdev = np.std(all_grades)
+        # The stdev of the difference between two numbers is sqrt(2) times the
+        # stdev of the numbers, assuming normal distribution.
+        overall_stdev *= 2 ** 0.5
+        for u in self.users:
+            u.quality = max(0.0, 1.0 - (u.variance ** 0.5) / overall_stdev)
+
 
 class Msg():
     def __init__(self):
@@ -337,11 +352,17 @@ class test_reputation(unittest.TestCase):
         print 'pasta', g.get_item('pasta').grade
         print 'pizza', g.get_item('pizza').grade
         print 'pollo', g.get_item('pollo').grade
+        print 'variances:'
         print 'luca', g.get_user('luca').variance
         print 'mike', g.get_user('mike').variance
         print 'hugo', g.get_user('hugo').variance
         print 'anna', g.get_user('anna').variance
-
+        print 'qualities:'
+        g.evaluate_users()
+        print 'luca', g.get_user('luca').quality
+        print 'mike', g.get_user('mike').quality
+        print 'hugo', g.get_user('hugo').quality
+        print 'anna', g.get_user('anna').quality
 
 if __name__ == '__main__':
     unittest.main()
