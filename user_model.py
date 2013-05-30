@@ -4,7 +4,8 @@ import numpy.random as npr
 
 class User:
     
-    def __init__(self, bias_stdev=0.2, eval_stdev=0.2, bimodal=False, frac=0.1):
+    def __init__(self, bias_stdev=0.2, eval_stdev=0.2, bimodal=False, frac=0.1, 
+                 pareto_shape=1.4):
         """Initializes the precision and bias of a user.  Useful only for simulation."""
         # Chooses the bias of the user
         self.true_bias = npr.normal(scale=bias_stdev)
@@ -14,13 +15,17 @@ class User:
             # where 10% is the fraction.
             # This code keeps the standard deviation as specified, but explains
             # it via a bimodal distribution, with values s and s / frac.
-            s = eval_stdev * frac / (1.0 + frac - frac * frac)
+            s = eval_stdev * eval_stdev * frac / (1.0 + frac - frac * frac)
             if npr.uniform() < frac:
-                self.prec = s / frac
+                self.prec = (s / (frac * frac)) ** 0.5
             else:
-                self.prec = s                
+                self.prec = s ** 0.5
         else:
-            self.prec = npr.pareto(2.0) * eval_stdev
+            # The mean of a pareto distribution of shape a is 1 / (a - 1)
+            # Here, we use the pareto distribution to sample the variance.
+            
+            prec_sq = npr.pareto(pareto_shape) * eval_stdev * eval_stdev * (pareto_shape - 1.0)
+            self.prec = prec_sq ** 0.5
         # List of items it judged.
         self.items = []
         # Dictionary mapping each item, to the grade assigned by the user.

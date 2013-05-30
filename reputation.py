@@ -5,11 +5,11 @@ import unittest
 
 
 # Do we debias grades?
-DEBIAS = True
+DEBIAS = False
 # Aggregation using median?
 AGGREGATE_BY_MEDIAN = True
 # Basic precision, as multiple of standard deviation.
-BASIC_PRECISION = 10.0
+BASIC_PRECISION = 0.5
 
 
 class User:
@@ -212,6 +212,7 @@ def aggregate_item_messages(graph):
     item_values = {}
     all_weights = [] # debug
     weight_vs_error = []
+    stdev_vs_true_stdev = []
     stdev_vs_error = []
     for it in graph.items:
         grades = []
@@ -229,8 +230,9 @@ def aggregate_item_messages(graph):
         # Debug
         for i, m in enumerate(it.msgs):
             stdev_vs_error.append((variances[i] ** 0.5, abs(m.grade - it.grade)))
+            stdev_vs_true_stdev.append((variances[i] ** 0.5, m.user.prec))
             weight_vs_error.append((weights[i], abs(it.q - m.grade)))
-    return item_values, all_weights, weight_vs_error, stdev_vs_error
+    return item_values, all_weights, weight_vs_error, stdev_vs_error, stdev_vs_true_stdev
 
 
 def aggregate_user_messages(graph):
@@ -276,18 +278,18 @@ def evaluate_items(graph, n_iterations=20, do_plots=False):
         propagate_from_users(graph)
     # Does the final aggregation step.
     aggregate_user_messages(graph)
-    r, ws, w_vs_e, s_vs_e = aggregate_item_messages(graph)
+    r, ws, w_vs_e, s_vs_e, s_vs_ts = aggregate_item_messages(graph)
     if do_plots:
-        plot_graph(graph, ws, w_vs_e, s_vs_e)
+        plot_graph(graph, ws, w_vs_e, s_vs_e, s_vs_ts)
     return r
 
 
-def plot_graph(graph, ws, w_vs_e, s_vs_e):
+def plot_graph(graph, ws, w_vs_e, s_vs_e, s_vs_ts):
     from matplotlib import pyplot as plt
     def unzip(l):
         return [x for x, _ in l], [x for _, x in l]
     # Plots user variance, estimated vs. true.
-    plt.subplot(2,3,1)
+    plt.subplot(2,4,1)
     var_plot = []
     for u in graph.users:
         var_plot.append((u.prec, u.variance ** 0.5))
@@ -296,7 +298,7 @@ def plot_graph(graph, ws, w_vs_e, s_vs_e):
     plt.plot(x, y, 'ro')
     plt.title('user stdev, est vs true')
     # Plots user bias, estimated vs. true. 
-    plt.subplot(2,3,2)
+    plt.subplot(2,4,2)
     var_plot = []
     for u in graph.users:
         var_plot.append((u.true_bias, u.bias))
@@ -305,7 +307,7 @@ def plot_graph(graph, ws, w_vs_e, s_vs_e):
     plt.plot(x, y, 'ro')
     plt.title('user bias, est vs true')
     # Plots item true value vs. estimated.
-    plt.subplot(2,3,4)
+    plt.subplot(2,4,5)
     var_plot = []
     for it in graph.items:
         var_plot.append((it.q, it.grade))
@@ -314,7 +316,7 @@ def plot_graph(graph, ws, w_vs_e, s_vs_e):
     plt.plot(x, y, 'ro')
     plt.title('item value, est vs true')
     # Plots item error vs. item variance. 
-    plt.subplot(2,3,5)
+    plt.subplot(2,4,6)
     var_plot = []
     for it in graph.items:
         var_plot.append((it.variance ** 0.5, abs(it.grade - it.q)))
@@ -322,17 +324,23 @@ def plot_graph(graph, ws, w_vs_e, s_vs_e):
     x, y = unzip(var_plot)
     plt.plot(x, y, 'ro')
     plt.title('item error, est vs true')
-    # Plots the weight distribution.
-    plt.subplot(2,3,3)
+    # Plots the stdev vs weight distribution.
+    plt.subplot(2,4,3)
     y, x = unzip(s_vs_e)
     plt.plot(x, y, 'ro')
     # plt.xscale('log')
     plt.title('stdev vs. error')
+    # Plots the stdev vs true stdev distribution.
+    plt.subplot(2,4,4)
+    y, x = unzip(s_vs_ts)
+    plt.plot(x, y, 'ro')
+    # plt.xscale('log')
+    plt.title('stdev vs. true stdev')
     # Plots weight vs. error.
-    plt.subplot(2,3,6)
+    plt.subplot(2,4,7)
     y, x = unzip(w_vs_e)
     plt.plot(x, y, 'ro')
-    plt.xscale('log')
+    # plt.xscale('log')
     plt.title('weight vs. error')
     plt.show()
 

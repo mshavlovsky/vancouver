@@ -11,7 +11,7 @@ N_USERS = 50
 N_ITEMS = 50
 N_REVIEWS = 5
 BIAS_STDEV = 0.001
-EVAL_STDEV = 0.2
+EVAL_STDEV = 0.4
 FRACTION_BAD = 0.1
 
 def eval_quality(values):
