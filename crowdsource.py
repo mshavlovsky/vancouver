@@ -4,7 +4,7 @@ import average_voting
 import user_model
 import item_model
 import graph_builder
-import reputation
+import reputation_instrumented
 import numpy as np
 
 N_USERS = 50
@@ -33,7 +33,7 @@ for i in range(10):
     print "Via average: ", av
     avs.append(av)
     # Evaluates this according to the reputation system.
-    values_via_rep = reputation.evaluate_items(graph, do_plots=False)
+    values_via_rep = reputation_instrumented.evaluate_items(graph, do_plots=False)
     rv = eval_quality(values_via_rep)
     print "Via reputation:", rv
     rvs.append(rv)
