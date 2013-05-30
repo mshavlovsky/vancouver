@@ -18,16 +18,16 @@ class User:
         """Initializes a user."""
         self.name = name
         self.items = []
-        self.grades = {}
+        self.grade = {}
         
     def add_item(self, it, grade):
         self.items.append(it)
-        self.grades[it] = grade
+        self.grade[it] = grade
         
 
 class Item:
     
-    def __init(self, id):
+    def __init__(self, id):
         self.id = id
         self.users = []
         self.grade = None
@@ -52,12 +52,14 @@ class Graph:
         else:
             u = User(username)
             self.user_dict[username] = u
+            self.users.append(u)
         # Gets, or creates, the item.
         if item_id in self.item_dict:
             it = self.item_dict[item_id]
         else:
             it = Item(item_id)
             self.item_dict[item_id] = it
+            self.items.append(it)
         # Adds the connection between the two.
         u.add_item(it, grade)
         it.add_user(u)
@@ -324,14 +326,14 @@ class test_reputation(unittest.TestCase):
         g.add_review('luca', 'pasta', 9.0)
         g.add_review('luca', 'pollo', 5.0)
         g.add_review('mike', 'pizza', 7.5)
-        g.add_review('mike', 'pizza', 8.0)
+        g.add_review('mike', 'pollo', 8.0)
         g.add_review('hugo', 'pizza', 6.0)
         g.add_review('hugo', 'pasta', 7.0)
         g.add_review('hugo', 'pollo', 7.5)
         g.add_review('anna', 'pizza', 7.0)
         g.add_review('anna', 'pasta', 8.5)
         g.add_review('anna', 'pollo', 5.5)
-        g.evaluate()
+        g.evaluate_items()
         print 'pasta', g.get_item('pasta').grade
         print 'pizza', g.get_item('pizza').grade
         print 'pollo', g.get_item('pollo').grade
