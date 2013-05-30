@@ -188,18 +188,19 @@ def propagate_from_users(graph):
                         given_grade = u.grade[m.item]
                         other_grade = m.grade
                         biases.append(given_grade - other_grade)
-                bias = aggregate(biases, weights=weights)
+                u.bias = aggregate(biases, weights=weights)
             else:
-                bias = 0.0
+                u.bias = 0.0
             # The grade is the grade given, de-biased. 
-            msg.grade = u.grade[it] - bias
+            msg.grade = u.grade[it] - u.bias
             # Estimates the standard deviation of the user, from the
             # other judged items.
             variance_estimates = []
             weights = []
             for m in u.msgs:
                 if m.item != it:
-                    variance_estimates.append((msg.grade - m.grade) ** 2.0)
+                    it_grade = u.grade[m.item] - u.bias
+                    variance_estimates.append((it_grade - m.grade) ** 2.0)
                     weights.append(1.0 / (BASIC_PRECISION + m.variance))
             msg.variance = aggregate(variance_estimates, weights=weights)
             # The message is ready for enqueuing.
