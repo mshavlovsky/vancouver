@@ -9,8 +9,8 @@ import numpy as np
 
 N_USERS = 50
 N_ITEMS = 50
-N_REVIEWS = 5
-BIAS_STDEV = 0.001
+N_REVIEWS = 10
+BIAS_STDEV = 0.2
 EVAL_STDEV = 0.2
 FRACTION_BAD = 0.2
 
@@ -22,8 +22,8 @@ def eval_quality(values):
 
 avs = []
 rvs = []
-for i in range(10):
-    users = [user_model.User(bias_stdev=BIAS_STDEV, eval_stdev=EVAL_STDEV, bimodal=True, frac=FRACTION_BAD)
+for i in range(1):
+    users = [user_model.User(bias_stdev=BIAS_STDEV, eval_stdev=EVAL_STDEV, bimodal=False, frac=FRACTION_BAD)
              for u in range(N_USERS)]
     items = [item_model.Item() for i in range(N_ITEMS)]
     graph = graph_builder.Graph(items, users, reviews=N_REVIEWS)
@@ -33,7 +33,7 @@ for i in range(10):
     print "Via average: ", av
     avs.append(av)
     # Evaluates this according to the reputation system.
-    values_via_rep = reputation_instrumented.evaluate_items(graph, do_plots=False)
+    values_via_rep = reputation_instrumented.evaluate_items(graph, do_plots=True)
     rv = eval_quality(values_via_rep)
     print "Via reputation:", rv
     rvs.append(rv)

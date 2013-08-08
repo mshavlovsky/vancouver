@@ -7,6 +7,7 @@ class Item:
         self._stdev = stdev
         self.q = npr.normal(loc=0.0, scale=stdev)
         self.users = []
+        self.grade = None
         
     def add_user(self, user):
         self.users.append(user)

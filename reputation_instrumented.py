@@ -5,7 +5,7 @@ import unittest
 
 
 # Do we debias grades?
-DEBIAS = False
+DEBIAS = True
 # Aggregation using median?
 AGGREGATE_BY_MEDIAN = False
 # Basic precision, as multiple of standard deviation.
@@ -286,7 +286,7 @@ def _aggregate_user_messages(graph):
         weights = []
         for m in u.msgs:
             it_grade = u.grade[m.item] - u.bias
-            variance_estimates.append((it_grade - m.grade) ** 2.0)
+            variance_estimates.append((it_grade - m.item.grade) ** 2.0)
             weights.append(1.0 / (BASIC_PRECISION + m.variance))
         u.variance = aggregate(variance_estimates, weights=weights)
    
@@ -307,8 +307,8 @@ def evaluate_items(graph, n_iterations=20, do_plots=False):
         _propagate_from_items(graph)
         _propagate_from_users(graph)
     # Does the final aggregation step.
-    _aggregate_user_messages(graph)
     r, ws, w_vs_e, s_vs_e, s_vs_ts = _aggregate_item_messages(graph)
+    _aggregate_user_messages(graph)
     if do_plots:
         plot_graph(graph, ws, w_vs_e, s_vs_e, s_vs_ts)
     return r

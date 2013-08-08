@@ -87,8 +87,8 @@ class Graph:
             self._propagate_from_items()
             self._propagate_from_users()
         # Does the final aggregation step.
-        self._aggregate_user_messages()
         self._aggregate_item_messages()
+        self._aggregate_user_messages()
 
 
     # Evaluates each item via average voting.
@@ -219,7 +219,7 @@ class Graph:
             weights = []
             for m in u.msgs:
                 it_grade = u.grade[m.item] - u.bias
-                variance_estimates.append((it_grade - m.grade) ** 2.0)
+                variance_estimates.append((it_grade - m.item.grade) ** 2.0)
                 weights.append(1.0 / (BASIC_PRECISION + m.variance))
             u.variance = aggregate(variance_estimates, weights=weights)
             
@@ -236,6 +236,25 @@ class Graph:
         # stdev of the numbers, assuming normal distribution.
         overall_stdev *= 2 ** 0.5
         for u in self.users:
+            u.quality = max(0.0, 1.0 - (u.variance ** 0.5) / overall_stdev)
+
+
+    def avg_evaluate_users(self):
+        """Evaluates users from item grades, as if no messages had actually been sent."""
+        # Computes the standard deviation of all grades ever given.
+        all_grades = []
+        for u in self.users:
+            all_grades.extend(u.grade.values())
+        overall_stdev = np.std(all_grades)
+        # The stdev of the difference between two numbers is sqrt(2) times the
+        # stdev of the numbers, assuming normal distribution.
+        overall_stdev *= 2 ** 0.5
+        for u in self.users:
+            diffs = []
+            for it in u.items:
+                d = it.grade - u.grade[it]
+                diffs.append(d * d)
+            u.variance = np.average(diffs)
             u.quality = max(0.0, 1.0 - (u.variance ** 0.5) / overall_stdev)
 
 
@@ -305,6 +324,67 @@ def median_aggregate(values, weights=None):
             beta = below + w[i] - half
             # print 'alpha', alpha, 'beta', beta
             return (beta * v[i] + alpha * (v[i] + v[i + 1]) / 2.0) / (alpha + beta)
+
+
+def plot_graph(graph, ws, w_vs_e, s_vs_e, s_vs_ts):
+    from matplotlib import pyplot as plt
+    def unzip(l):
+        return [x for x, _ in l], [x for _, x in l]
+    # Plots user variance, estimated vs. true.
+    plt.subplot(2,4,1)
+    var_plot = []
+    for u in graph.users:
+        var_plot.append((u.prec, u.variance ** 0.5))
+    var_plot.sort()
+    x, y = unzip(var_plot)
+    plt.plot(x, y, 'ro')
+    plt.title('user stdev, est vs true')
+    # Plots user bias, estimated vs. true. 
+    plt.subplot(2,4,2)
+    var_plot = []
+    for u in graph.users:
+        var_plot.append((u.true_bias, u.bias))
+    var_plot.sort()
+    x, y = unzip(var_plot)
+    plt.plot(x, y, 'ro')
+    plt.title('user bias, est vs true')
+    # Plots item true value vs. estimated.
+    plt.subplot(2,4,5)
+    var_plot = []
+    for it in graph.items:
+        var_plot.append((it.q, it.grade))
+    var_plot.sort()
+    x, y = unzip(var_plot)
+    plt.plot(x, y, 'ro')
+    plt.title('item value, est vs true')
+    # Plots item error vs. item variance. 
+    plt.subplot(2,4,6)
+    var_plot = []
+    for it in graph.items:
+        var_plot.append((it.variance ** 0.5, abs(it.grade - it.q)))
+    var_plot.sort()
+    x, y = unzip(var_plot)
+    plt.plot(x, y, 'ro')
+    plt.title('item error, est vs true')
+    # Plots the stdev vs weight distribution.
+    plt.subplot(2,4,3)
+    y, x = unzip(s_vs_e)
+    plt.plot(x, y, 'ro')
+    # plt.xscale('log')
+    plt.title('stdev vs. error')
+    # Plots the stdev vs true stdev distribution.
+    plt.subplot(2,4,4)
+    y, x = unzip(s_vs_ts)
+    plt.plot(x, y, 'ro')
+    # plt.xscale('log')
+    plt.title('stdev vs. true stdev')
+    # Plots weight vs. error.
+    plt.subplot(2,4,7)
+    y, x = unzip(w_vs_e)
+    plt.plot(x, y, 'ro')
+    # plt.xscale('log')
+    plt.title('weight vs. error')
+    plt.show()
 
 
 class TestMedian(unittest.TestCase):
