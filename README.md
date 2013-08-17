@@ -1,0 +1,4 @@
+vancouver
+=========
+
+Vancouver crowdsourcing algorithm.
