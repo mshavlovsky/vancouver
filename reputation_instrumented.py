@@ -5,7 +5,7 @@ import unittest
 
 
 # Do we debias grades?
-DEBIAS = True
+DEBIAS = False
 # Aggregation using median?
 AGGREGATE_BY_MEDIAN = False
 # Basic precision, as multiple of standard deviation.
