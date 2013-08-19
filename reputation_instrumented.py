@@ -180,18 +180,11 @@ def _propagate_from_items(graph):
             msg = Msg()
             msg.item = it
             msg.grade = aggregate(grades, weights=weights)
-            # Now I need to estimate the standard deviation of the grade. 
-            if True:
-                # This is a way to estimate the variance from the user-declared variances.
-                msg.variance = np.sum(variances * weights * weights)
-            else:
-                # This is a way to estimate the variance from the actual data.
-                diff_list = []
-                for m in it.msgs:
-                    if m.user != u:
-                        diff_list.append(m.grade - msg.grade)
-                diff_list = np.array(diff_list)
-                msg.variance = np.sum(diff_list * diff_list * weights)
+            # Now I need to estimate the variance of the grade. 
+            # Estimates the standard deviation of the user, from the
+            # other judged items.
+            msg.variance = 1.0 / np.sum(1.0 / (BASIC_PRECISION + variances))
+            # The message is ready for enqueuing.
             u.msgs.append(msg)
 
 
@@ -255,7 +248,7 @@ def _aggregate_item_messages(graph):
         weights /= np.sum(weights)
         all_weights.append(weights)
         it.grade = aggregate(grades, weights=weights)
-        it.variance = np.sum(variances * weights * weights)
+        it.variance = 1.0 / np.sum(1.0 / (BASIC_PRECISION + variances))
         item_values[it] = it.grade
         # Debug
         for i, m in enumerate(it.msgs):
