@@ -9,7 +9,7 @@ DEBIAS = False
 # Aggregation using median?
 AGGREGATE_BY_MEDIAN = False
 # Basic precision, as multiple of standard deviation.
-BASIC_PRECISION = 0.0001
+BASIC_PRECISION = 0.00001
 
 
 class User:

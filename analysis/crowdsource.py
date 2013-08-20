@@ -14,7 +14,7 @@ BIAS_STDEV = 0.0
 EVAL_STDEV = 0.4
 FRACTION_BAD = 0.2
 GAMMA_SHAPE = 2
-N_ITERATIONS = 100
+N_ITERATIONS = 10
 DO_PLOTS = False
 
 def eval_quality(values):
