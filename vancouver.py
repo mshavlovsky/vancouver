@@ -333,67 +333,6 @@ def median_aggregate(values, weights=None):
             return (beta * v[i] + alpha * (v[i] + v[i + 1]) / 2.0) / (alpha + beta)
 
 
-def plot_graph(graph, ws, w_vs_e, s_vs_e, s_vs_ts):
-    from matplotlib import pyplot as plt
-    def unzip(l):
-        return [x for x, _ in l], [x for _, x in l]
-    # Plots user variance, estimated vs. true.
-    plt.subplot(2,4,1)
-    var_plot = []
-    for u in graph.users:
-        var_plot.append((u.prec, u.variance ** 0.5))
-    var_plot.sort()
-    x, y = unzip(var_plot)
-    plt.plot(x, y, 'ro')
-    plt.title('user stdev, est vs true')
-    # Plots user bias, estimated vs. true. 
-    plt.subplot(2,4,2)
-    var_plot = []
-    for u in graph.users:
-        var_plot.append((u.true_bias, u.bias))
-    var_plot.sort()
-    x, y = unzip(var_plot)
-    plt.plot(x, y, 'ro')
-    plt.title('user bias, est vs true')
-    # Plots item true value vs. estimated.
-    plt.subplot(2,4,5)
-    var_plot = []
-    for it in graph.items:
-        var_plot.append((it.q, it.grade))
-    var_plot.sort()
-    x, y = unzip(var_plot)
-    plt.plot(x, y, 'ro')
-    plt.title('item value, est vs true')
-    # Plots item error vs. item variance. 
-    plt.subplot(2,4,6)
-    var_plot = []
-    for it in graph.items:
-        var_plot.append((it.variance ** 0.5, abs(it.grade - it.q)))
-    var_plot.sort()
-    x, y = unzip(var_plot)
-    plt.plot(x, y, 'ro')
-    plt.title('item error, est vs true')
-    # Plots the stdev vs weight distribution.
-    plt.subplot(2,4,3)
-    y, x = unzip(s_vs_e)
-    plt.plot(x, y, 'ro')
-    # plt.xscale('log')
-    plt.title('stdev vs. error')
-    # Plots the stdev vs true stdev distribution.
-    plt.subplot(2,4,4)
-    y, x = unzip(s_vs_ts)
-    plt.plot(x, y, 'ro')
-    # plt.xscale('log')
-    plt.title('stdev vs. true stdev')
-    # Plots weight vs. error.
-    plt.subplot(2,4,7)
-    y, x = unzip(w_vs_e)
-    plt.plot(x, y, 'ro')
-    # plt.xscale('log')
-    plt.title('weight vs. error')
-    plt.show()
-
-
 class TestMedian(unittest.TestCase):
     
     def test_median_0(self):
