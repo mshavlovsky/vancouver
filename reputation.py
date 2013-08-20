@@ -114,31 +114,32 @@ class Graph:
             # Standard deviation
             # Total weight
             for u in it.users:
-                grades = []
-                variances = []
-                for m in it.msgs:
-                    if m.user != u:
-                        grades.append(m.grade)
-                        variances.append(m.variance)
-                variances = np.array(variances)
-                weights = 1.0 / (BASIC_PRECISION + variances)
-                weights /= np.sum(weights)
-                msg = Msg()
-                msg.item = it
-                msg.grade = aggregate(grades, weights=weights)
-                # Now I need to estimate the standard deviation of the grade. 
-                if True:
-                    # This is a way to estimate the variance from the user-declared variances.
-                    msg.variance = np.sum(variances * weights * weights)
-                else:
-                    # This is a way to estimate the variance from the actual data.
-                    diff_list = []
+                if len(it.msgs) > 0:
+                    grades = []
+                    variances = []
                     for m in it.msgs:
-                        if m.user != u:
-                            diff_list.append(m.grade - msg.grade)
-                    diff_list = np.array(diff_list)
-                    msg.variance = np.sum(diff_list * diff_list * weights)
-                u.msgs.append(msg)
+                        if m.user != u or len(it.msgs) < 2:
+                            grades.append(m.grade)
+                            variances.append(m.variance)
+                    variances = np.array(variances)
+                    weights = 1.0 / (BASIC_PRECISION + variances)
+                    weights /= np.sum(weights)
+                    msg = Msg()
+                    msg.item = it
+                    msg.grade = aggregate(grades, weights=weights)
+                    # Now I need to estimate the standard deviation of the grade. 
+                    if True:
+                        # This is a way to estimate the variance from the user-declared variances.
+                        msg.variance = np.sum(variances * weights * weights)
+                    else:
+                        # This is a way to estimate the variance from the actual data.
+                        diff_list = []
+                        for m in it.msgs:
+                            if m.user != u:
+                                diff_list.append(m.grade - msg.grade)
+                        diff_list = np.array(diff_list)
+                        msg.variance = np.sum(diff_list * diff_list * weights)
+                    u.msgs.append(msg)
     
     
     def _propagate_from_users(self):
@@ -150,78 +151,84 @@ class Graph:
         # The information to be sent is a grade, and an estimated standard deviation.
         for u in self.users:
             for it in u.items:
-                # The user looks at the messages from other items, and computes
-                # what has been the bias of its evaluation. 
-                msg = Msg()
-                msg.user = u
-                biases = []
-                weights = []
-                if DEBIAS:
+                if len(u.msgs) > 0:
+                    # The user looks at the messages from other items, and computes
+                    # what has been the bias of its evaluation. 
+                    msg = Msg()
+                    msg.user = u
+                    biases = []
+                    weights = []
+                    if DEBIAS:
+                        for m in u.msgs:
+                            if m.item != it or len(u.msgs) < 2:
+                                weights.append(1 / (BASIC_PRECISION + m.variance))
+                                given_grade = u.grade[m.item]
+                                other_grade = m.grade
+                                biases.append(given_grade - other_grade)
+                        u.bias = aggregate(biases, weights=weights)
+                    else:
+                        u.bias = 0.0
+                    # The grade is the grade given, de-biased. 
+                    msg.grade = u.grade[it] - u.bias
+                    # Estimates the standard deviation of the user, from the
+                    # other judged items.
+                    variance_estimates = []
+                    weights = []
                     for m in u.msgs:
-                        if m.item != it:
-                            weights.append(1 / (BASIC_PRECISION + m.variance))
-                            given_grade = u.grade[m.item]
-                            other_grade = m.grade
-                            biases.append(given_grade - other_grade)
-                    u.bias = aggregate(biases, weights=weights)
-                else:
-                    u.bias = 0.0
-                # The grade is the grade given, de-biased. 
-                msg.grade = u.grade[it] - u.bias
-                # Estimates the standard deviation of the user, from the
-                # other judged items.
-                variance_estimates = []
-                weights = []
-                for m in u.msgs:
-                    if m.item != it:
-                        it_grade = u.grade[m.item] - u.bias
-                        variance_estimates.append((it_grade - m.grade) ** 2.0)
-                        weights.append(1.0 / (BASIC_PRECISION + m.variance))
-                msg.variance = aggregate(variance_estimates, weights=weights)
-                # The message is ready for enqueuing.
-                it.msgs.append(msg)
+                        if m.item != it or len(u.msgs) < 2:
+                            it_grade = u.grade[m.item] - u.bias
+                            variance_estimates.append((it_grade - m.grade) ** 2.0)
+                            weights.append(1.0 / (BASIC_PRECISION + m.variance))
+                    msg.variance = aggregate(variance_estimates, weights=weights)
+                    # The message is ready for enqueuing.
+                    it.msgs.append(msg)
                     
     
     def _aggregate_item_messages(self):
         """Aggregates the information on an item, computing the grade
         and the variance of the grade."""
         for it in self.items:
-            grades = []
-            variances = []
-            for m in it.msgs:
-                grades.append(m.grade)
-                variances.append(m.variance)
-            variances = np.array(variances)
-            weights = 1.0 / (BASIC_PRECISION + variances)
-            weights /= np.sum(weights)
-            it.grade = aggregate(grades, weights=weights)
-            it.variance = np.sum(variances * weights * weights)
+            it.grade = None
+            it.variance = None
+            if len(it.msgs) > 0:
+                grades = []
+                variances = []
+                for m in it.msgs:
+                    grades.append(m.grade)
+                    variances.append(m.variance)
+                variances = np.array(variances)
+                weights = 1.0 / (BASIC_PRECISION + variances)
+                weights /= np.sum(weights)
+                it.grade = aggregate(grades, weights=weights)
+                it.variance = np.sum(variances * weights * weights)
     
     
     def _aggregate_user_messages(self):
         """Aggregates the information on a user, computing the 
         variance and bias of a user."""
         for u in self.users:
-            biases = []
-            weights = []
-            # Estimates the bias.
-            if DEBIAS:
+            u.variance = None
+            if len(u.msgs) > 0:
+                biases = []
+                weights = []
+                # Estimates the bias.
+                if DEBIAS:
+                    for m in u.msgs:
+                        weights.append(1 / (BASIC_PRECISION + m.variance))
+                        given_grade = u.grade[m.item]
+                        other_grade = m.grade
+                        biases.append(given_grade - other_grade)
+                    u.bias = aggregate(biases, weights=weights)
+                else:
+                    u.bias = 0.0
+                # Estimates the grade for each item.
+                variance_estimates = []
+                weights = []
                 for m in u.msgs:
-                    weights.append(1 / (BASIC_PRECISION + m.variance))
-                    given_grade = u.grade[m.item]
-                    other_grade = m.grade
-                    biases.append(given_grade - other_grade)
-                u.bias = aggregate(biases, weights=weights)
-            else:
-                u.bias = 0.0
-            # Estimates the grade for each item.
-            variance_estimates = []
-            weights = []
-            for m in u.msgs:
-                it_grade = u.grade[m.item] - u.bias
-                variance_estimates.append((it_grade - m.item.grade) ** 2.0)
-                weights.append(1.0 / (BASIC_PRECISION + m.variance))
-            u.variance = aggregate(variance_estimates, weights=weights)
+                    it_grade = u.grade[m.item] - u.bias
+                    variance_estimates.append((it_grade - m.item.grade) ** 2.0)
+                    weights.append(1.0 / (BASIC_PRECISION + m.variance))
+                u.variance = aggregate(variance_estimates, weights=weights)
             
             
     def evaluate_users(self):
@@ -429,6 +436,8 @@ class test_reputation(unittest.TestCase):
         g.add_review('anna', 'pizza', 7.0)
         g.add_review('anna', 'pasta', 8.5)
         g.add_review('anna', 'pollo', 5.5)
+        g.add_review('carl', 'pollo', 5.4)
+        g.add_review('luca', 'steak', 6.0)
         g.evaluate_items()
         print 'pasta', g.get_item('pasta').grade
         print 'pizza', g.get_item('pizza').grade
