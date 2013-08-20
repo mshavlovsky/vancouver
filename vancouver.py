@@ -128,17 +128,7 @@ class Graph:
                     msg.item = it
                     msg.grade = aggregate(grades, weights=weights)
                     # Now I need to estimate the standard deviation of the grade. 
-                    if True:
-                        # This is a way to estimate the variance from the user-declared variances.
-                        msg.variance = np.sum(variances * weights * weights)
-                    else:
-                        # This is a way to estimate the variance from the actual data.
-                        diff_list = []
-                        for m in it.msgs:
-                            if m.user != u:
-                                diff_list.append(m.grade - msg.grade)
-                        diff_list = np.array(diff_list)
-                        msg.variance = np.sum(diff_list * diff_list * weights)
+                    msg.variance = np.sum(variances * weights * weights)
                     u.msgs.append(msg)
     
     
