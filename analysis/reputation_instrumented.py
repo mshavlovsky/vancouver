@@ -43,12 +43,13 @@ class Item:
 
 class Graph:
     
-    def __init__(self):
+    def __init__(self, use_mlestimator_user_variance=False):
         
         self.items = []
         self.users = []
         self.user_dict = {}
         self.item_dict = {}
+        self.use_mle = use_mlestimator_user_variance
         
     def add_review(self, username, item_id, grade):
         # Gets, or creates, the user. 
@@ -99,6 +100,13 @@ def aggregate(v, weights=None):
             return np.average(v, weights=weights)
         else:
             return np.average(v)
+
+
+def max_likelihood_estimator(v):
+    n = len(v)
+    if n == 1:
+        return v[0]
+    return sum(v) / float(n - 1)
 
 
 def median_aggregate(values, weights=None):
@@ -224,7 +232,11 @@ def _propagate_from_users(graph):
                     it_grade = u.grade[m.item] - u.bias
                     variance_estimates.append((it_grade - m.grade) ** 2.0)
                     weights.append(1.0 / (BASIC_PRECISION + m.variance))
-            msg.variance = aggregate(variance_estimates, weights=weights)
+            # Do we estimate user's variance using maximum likelihood?
+            if graph.use_mle:
+                msg.variance = max_likelihood_estimator(variance_estimates)
+            else:
+                msg.variance = aggregate(variance_estimates, weights=weights)
             # The message is ready for enqueuing.
             it.msgs.append(msg)
                 
@@ -281,7 +293,8 @@ def _aggregate_user_messages(graph):
             it_grade = u.grade[m.item] - u.bias
             variance_estimates.append((it_grade - m.item.grade) ** 2.0)
             weights.append(1.0 / (BASIC_PRECISION + m.variance))
-        u.variance = aggregate(variance_estimates, weights=weights)
+        #u.variance = aggregate(variance_estimates, weights=weights)
+        u.variance = max_likelihood_estimator(variance_estimates)
    
     
 def evaluate_items(graph, n_iterations=20, do_plots=False):

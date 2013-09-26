@@ -3,7 +3,8 @@ from random import choice
 
 class Graph:
     
-    def __init__(self, items, users, reviews=5):
+    def __init__(self, items, users, reviews=5,
+                 use_mlestimator_user_variance=False):
         """Initializes a random graph between the specified users
         and items, for the specified number of reviews."""
         self.items = items
@@ -21,7 +22,9 @@ class Graph:
             user = self.pick_user()
             user.add_item(item)
             item.add_user(user)
+        self.use_mle = use_mlestimator_user_variance
         
+
     def pick_user(self):
         if self.under_allocated_users == []:
             self.under_allocated_users = [u for u in self.users]
