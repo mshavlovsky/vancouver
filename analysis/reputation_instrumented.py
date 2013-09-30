@@ -293,8 +293,8 @@ def _aggregate_user_messages(graph):
             it_grade = u.grade[m.item] - u.bias
             variance_estimates.append((it_grade - m.item.grade) ** 2.0)
             weights.append(1.0 / (BASIC_PRECISION + m.variance))
-        #u.variance = aggregate(variance_estimates, weights=weights)
-        u.variance = max_likelihood_estimator(variance_estimates)
+        u.variance = aggregate(variance_estimates, weights=weights)
+        #u.variance = max_likelihood_estimator(variance_estimates)
    
     
 def evaluate_items(graph, n_iterations=20, do_plots=False):
