@@ -36,5 +36,11 @@ class Graph:
             self.under_allocated_items = [it for it in self.items]
         i = choice(range(len(self.under_allocated_items)))
         return self.under_allocated_items.pop(i)
-            
-        
+
+    def __repr__(self):
+        s = "Graph \n"
+        for u in self.users:
+            for it in u.items:
+                s = s + "user %s -> item %s, grade %s\n" % (str(u)[-9:-1], str(it)[-9: -1], u.grade[it])
+        return s
+

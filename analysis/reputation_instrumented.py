@@ -187,6 +187,7 @@ def _propagate_from_items(graph):
             weights /= np.sum(weights)
             msg = Msg()
             msg.item = it
+            print "weights", weights
             msg.grade = aggregate(grades, weights=weights)
             # Now I need to estimate the variance of the grade. 
             # Estimates the standard deviation of the user, from the
