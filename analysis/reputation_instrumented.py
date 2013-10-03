@@ -102,6 +102,11 @@ def aggregate(v, weights=None):
             return np.average(v)
 
 
+def compute_item_variance(grades, weights):
+     average = np.average(grades, weights=weights)   
+     stdev = np.sqrt(np.average((np.array(grades) - average)**2, weights=weights))
+     return stdev
+
 def max_likelihood_estimator(v):
     n = len(v)
     if n == 1:
@@ -191,7 +196,12 @@ def _propagate_from_items(graph):
             # Now I need to estimate the variance of the grade. 
             # Estimates the standard deviation of the user, from the
             # other judged items.
-            msg.variance = 1.0 / np.sum(1.0 / (BASIC_PRECISION + variances))
+            if graph.compute_item_variance:
+                # Computes the itmem's variance
+                msg.variance = compute_item_variance(grades, weights)
+            else:
+                # Estimates the itmem's variance
+                msg.variance = 1.0 / np.sum(1.0 / (BASIC_PRECISION + variances))
             # The message is ready for enqueuing.
             u.msgs.append(msg)
 

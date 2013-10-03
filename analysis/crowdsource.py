@@ -16,12 +16,12 @@ BIAS_STDEV = 0.0
 EVAL_STDEV = 0.4
 FRACTION_BAD = 0.2
 GAMMA_SHAPE = 2
-ITEMS_DIFFICULTY = 0
-ITEMS_FRACTION_BAD = 0
-N_ITERATIONS = 10
+ITEMS_DIFFICULTY = 1.0
+ITEMS_FRACTION_BAD = 0.2
+N_ITERATIONS = 50
 DO_PLOTS = False
 
-def eval_quality(values, items, only_good=False):
+def eval_quality(values, items, only_good=True):
     if only_good:
         items = [it for it in items if it.difficulty == 0]
     diffs = [values[it] - it.true_quality for it in items]
@@ -39,6 +39,8 @@ rvs = []
 rcs = []
 stdev_mle = []
 corr_mle = []
+stdev_var_comp = []
+corr_var_comp = []
 for i in range(N_ITERATIONS):
     users = [user_model.User(bias_stdev=BIAS_STDEV, eval_stdev=EVAL_STDEV, mode='gamma',
                              gamma_shape=GAMMA_SHAPE, frac=FRACTION_BAD)
@@ -63,12 +65,22 @@ for i in range(N_ITERATIONS):
     mle_v, mle_c = eval_quality(values_via_rep_mle, items)
     stdev_mle.append(mle_v)
     corr_mle.append(mle_c)
+    # Evaluates this according to the reputation system with computing
+    # item variance (not estimating!)
+    graph.use_mle = False
+    graph.compute_item_variance = True
+    values_via_var_comp = reputation_instrumented.evaluate_items(graph, do_plots=DO_PLOTS)
+    v_var_comp, c_var_comp = eval_quality(values_via_var_comp, items)
+    stdev_var_comp.append(v_var_comp)
+    corr_var_comp.append(c_var_comp)
+
 
 print "Stdev via average:", np.average(avs)
 print "Stdev via reputation:", np.average(rvs)
-print "Stdev vie reputation using mle:", np.average(stdev_mle)
+print "Stdev via reputation using mle:", np.average(stdev_mle)
+print "Stdev via computing item variances", np.average(stdev_var_comp)
 print "Correlation via average:", np.average(acs)
 print "Correlation via reputation:", np.average(rcs)
 print "Correlation via reputation using mle:", np.average(corr_mle)
-
+print "Correlation via computing item variances", np.average(corr_var_comp)
 
