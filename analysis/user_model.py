@@ -4,7 +4,7 @@ import numpy.random as npr
 
 class User:
     
-    def __init__(self, bias_stdev=0.2, eval_stdev=0.2, mode='pareto', frac=0.1, 
+    def __init__(self, bias_stdev=0, eval_stdev=0.2, mode='pareto', frac=0.1, 
                  pareto_shape=1.4, gamma_shape=3, prec=None):
         """Initializes the precision and bias of a user.  Useful only for simulation."""
         # Chooses the bias of the user
