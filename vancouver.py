@@ -19,11 +19,11 @@ class User:
     def __init__(self, name):
         """Initializes a user."""
         self.name = name
-        self.items = []
+        self.items = set()
         self.grade = {}
         
     def add_item(self, it, grade):
-        self.items.append(it)
+        self.items = self.items | set([it])
         self.grade[it] = grade
         
 
@@ -31,19 +31,19 @@ class Item:
     
     def __init__(self, id):
         self.id = id
-        self.users = []
+        self.users = set()
         self.grade = None
     
     def add_user(self, u):
-        self.users.append(u)
+        self.users = self.users | set([u])
 
 
 class Graph:
     
     def __init__(self, basic_precision=BASIC_PRECISION, use_all_data=USE_ALL_DATA):
         
-        self.items = []
-        self.users = []
+        self.items = set()
+        self.users = set()
         self.user_dict = {}
         self.item_dict = {}
         self.basic_precision = basic_precision
@@ -56,14 +56,14 @@ class Graph:
         else:
             u = User(username)
             self.user_dict[username] = u
-            self.users.append(u)
+            self.users = self.users | set([u])
         # Gets, or creates, the item.
         if item_id in self.item_dict:
             it = self.item_dict[item_id]
         else:
             it = Item(item_id)
             self.item_dict[item_id] = it
-            self.items.append(it)
+            self.items = self.items | set([it])
         # Adds the connection between the two.
         u.add_item(it, grade)
         it.add_user(u)
