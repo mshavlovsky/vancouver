@@ -11,7 +11,8 @@ DEBIAS = False
 AGGREGATE_BY_MEDIAN = False
 # Basic precision, as multiple of standard deviation.
 BASIC_PRECISION = 0.0001
-
+# Uses also data from a vertex in order to send a message to that vertex?
+USE_ALL_DATA = True
 
 class User:
     
@@ -39,12 +40,14 @@ class Item:
 
 class Graph:
     
-    def __init__(self):
+    def __init__(self, basic_precision=BASIC_PRECISION, use_all_data=USE_ALL_DATA):
         
         self.items = []
         self.users = []
         self.user_dict = {}
         self.item_dict = {}
+        self.basic_precision = basic_precision
+        self.use_all_data = use_all_data
         
     def add_review(self, username, item_id, grade):
         # Gets, or creates, the user. 
@@ -118,11 +121,11 @@ class Graph:
                     grades = []
                     variances = []
                     for m in it.msgs:
-                        if m.user != u or len(it.msgs) < 2:
+                        if self.use_all_data or m.user != u or len(it.msgs) < 2:
                             grades.append(m.grade)
                             variances.append(m.variance)
                     variances = np.array(variances)
-                    weights = 1.0 / (BASIC_PRECISION + variances)
+                    weights = 1.0 / (self.basic_precision + variances)
                     weights /= np.sum(weights)
                     msg = Msg()
                     msg.item = it
@@ -150,8 +153,8 @@ class Graph:
                     weights = []
                     if DEBIAS:
                         for m in u.msgs:
-                            if m.item != it or len(u.msgs) < 2:
-                                weights.append(1 / (BASIC_PRECISION + m.variance))
+                            if self.use_all_data or m.item != it or len(u.msgs) < 2:
+                                weights.append(1 / (self.basic_precision + m.variance))
                                 given_grade = u.grade[m.item]
                                 other_grade = m.grade
                                 biases.append(given_grade - other_grade)
@@ -165,10 +168,10 @@ class Graph:
                     variance_estimates = []
                     weights = []
                     for m in u.msgs:
-                        if m.item != it or len(u.msgs) < 2:
+                        if self.use_all_data or m.item != it or len(u.msgs) < 2:
                             it_grade = u.grade[m.item] - u.bias
                             variance_estimates.append((it_grade - m.grade) ** 2.0)
-                            weights.append(1.0 / (BASIC_PRECISION + m.variance))
+                            weights.append(1.0 / (self.basic_precision + m.variance))
                     msg.variance = aggregate(variance_estimates, weights=weights)
                     # The message is ready for enqueuing.
                     it.msgs.append(msg)
@@ -187,7 +190,7 @@ class Graph:
                     grades.append(m.grade)
                     variances.append(m.variance)
                 variances = np.array(variances)
-                weights = 1.0 / (BASIC_PRECISION + variances)
+                weights = 1.0 / (self.basic_precision + variances)
                 weights /= np.sum(weights)
                 it.grade = aggregate(grades, weights=weights)
                 it.variance = np.sum(variances * weights * weights)
@@ -204,7 +207,7 @@ class Graph:
                 # Estimates the bias.
                 if DEBIAS:
                     for m in u.msgs:
-                        weights.append(1 / (BASIC_PRECISION + m.variance))
+                        weights.append(1 / (self.basic_precision + m.variance))
                         given_grade = u.grade[m.item]
                         other_grade = m.grade
                         biases.append(given_grade - other_grade)
@@ -217,7 +220,7 @@ class Graph:
                 for m in u.msgs:
                     it_grade = u.grade[m.item] - u.bias
                     variance_estimates.append((it_grade - m.item.grade) ** 2.0)
-                    weights.append(1.0 / (BASIC_PRECISION + m.variance))
+                    weights.append(1.0 / (self.basic_precision + m.variance))
                 u.variance = aggregate(variance_estimates, weights=weights)
             
             
