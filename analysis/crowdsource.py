@@ -32,10 +32,12 @@ acs = []
 rvs = []
 rcs = []
 for i in range(N_ITERATIONS):
-    users = [user_model.User(bias_stdev=BIAS_STDEV, eval_stdev=EVAL_STDEV, mode='gamma', 
-                             gamma_shape=GAMMA_SHAPE, frac=FRACTION_BAD)
+    users = [user_model.User(true_bias=2, true_precision=0.0001)
              for u in range(N_USERS)]
-    items = [item_model.Item() for i in range(N_ITEMS)]
+    users[0].true_bias = 0.0
+    users[0].prec = 0.000001
+    users[0].is_instructor = True
+    items = [item_model.Item(stdev=5.0) for i in range(N_ITEMS)]
     graph = graph_builder.Graph(items, users, reviews=N_REVIEWS)
     # Evaluates this according to simple average. 
     values_via_avg = average_voting.evaluate_items(graph)

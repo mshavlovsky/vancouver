@@ -5,7 +5,7 @@ import unittest
 
 
 # Do we debias grades?
-DEBIAS = False
+DEBIAS = True
 # Aggregation using median?
 AGGREGATE_BY_MEDIAN = False
 # Basic precision, as multiple of standard deviation.
@@ -204,27 +204,33 @@ def _propagate_from_users(graph):
             biases = []
             weights = []
             if DEBIAS:
-                for m in u.msgs:
-                    if m.item != it:
-                        weights.append(1 / (BASIC_PRECISION + m.variance))
-                        given_grade = u.grade[m.item]
-                        other_grade = m.grade
-                        biases.append(given_grade - other_grade)
-                u.bias = aggregate(biases, weights=weights)
+                if u.is_instructor:
+                    u.bias = 0.0
+                else:
+                    for m in u.msgs:
+                        if m.item != it:
+                            weights.append(1 / (BASIC_PRECISION + m.variance))
+                            given_grade = u.grade[m.item]
+                            other_grade = m.grade
+                            biases.append(given_grade - other_grade)
+                    u.bias = aggregate(biases, weights=weights)
             else:
                 u.bias = 0.0
-            # The grade is the grade given, de-biased. 
+            # The grade is the grade given, de-biased.
             msg.grade = u.grade[it] - u.bias
             # Estimates the standard deviation of the user, from the
             # other judged items.
-            variance_estimates = []
-            weights = []
-            for m in u.msgs:
-                if m.item != it:
-                    it_grade = u.grade[m.item] - u.bias
-                    variance_estimates.append((it_grade - m.grade) ** 2.0)
-                    weights.append(1.0 / (BASIC_PRECISION + m.variance))
-            msg.variance = aggregate(variance_estimates, weights=weights)
+            if u.is_instructor:
+                msg.variance = 0.000001
+            else:
+                variance_estimates = []
+                weights = []
+                for m in u.msgs:
+                    if m.item != it:
+                        it_grade = u.grade[m.item] - u.bias
+                        variance_estimates.append((it_grade - m.grade) ** 2.0)
+                        weights.append(1.0 / (BASIC_PRECISION + m.variance))
+                msg.variance = aggregate(variance_estimates, weights=weights)
             # The message is ready for enqueuing.
             it.msgs.append(msg)
                 
@@ -266,23 +272,29 @@ def _aggregate_user_messages(graph):
         weights = []
         # Estimates the bias.
         if DEBIAS:
-            for m in u.msgs:
-                weights.append(1 / (BASIC_PRECISION + m.variance))
-                given_grade = u.grade[m.item]
-                other_grade = m.grade
-                biases.append(given_grade - other_grade)
-            u.bias = aggregate(biases, weights=weights)
+            if u.is_instructor:
+                u.bias = 0.0
+            else:
+                for m in u.msgs:
+                    weights.append(1 / (BASIC_PRECISION + m.variance))
+                    given_grade = u.grade[m.item]
+                    other_grade = m.grade
+                    biases.append(given_grade - other_grade)
+                u.bias = aggregate(biases, weights=weights)
         else:
             u.bias = 0.0
         # Estimates the grade for each item.
-        variance_estimates = []
-        weights = []
-        for m in u.msgs:
-            it_grade = u.grade[m.item] - u.bias
-            variance_estimates.append((it_grade - m.item.grade) ** 2.0)
-            weights.append(1.0 / (BASIC_PRECISION + m.variance))
-        u.variance = aggregate(variance_estimates, weights=weights)
-   
+        if u.is_instructor:
+            u.variance = 0.000001
+        else:
+            variance_estimates = []
+            weights = []
+            for m in u.msgs:
+                it_grade = u.grade[m.item] - u.bias
+                variance_estimates.append((it_grade - m.item.grade) ** 2.0)
+                weights.append(1.0 / (BASIC_PRECISION + m.variance))
+            u.variance = aggregate(variance_estimates, weights=weights)
+
     
 def evaluate_items(graph, n_iterations=20, do_plots=False):
     """Evaluates items using the reputation system iterations."""
@@ -293,15 +305,31 @@ def evaluate_items(graph, n_iterations=20, do_plots=False):
             m = Msg()
             m.user = u
             m.grade = u.grade[it]
-            m.variance = 1.0
+            if u.is_instructor:
+                m.variance = 0.000001
+            else:
+                m.variance = 1.0
             it.msgs.append(m)
     # Does the propagation iterations.
     for i in range(n_iterations):
         _propagate_from_items(graph)
         _propagate_from_users(graph)
+
+        # _aggregate_item_messages(graph)
+        # _aggregate_user_messages(graph)
+        # print
+        # print 'iteration', i
+        # print 'users'
+        # for u in graph.users:
+        #     is_neighbour = 'NOT instuctor\'s neighbour'
+        #     if u.is_instructors_neighbour():
+        #         is_neighbour = 'instuctor\'s neighbour'
+        #     print u.bias, u.variance, is_neighbour
     # Does the final aggregation step.
     r, ws, w_vs_e, s_vs_e, s_vs_ts = _aggregate_item_messages(graph)
     _aggregate_user_messages(graph)
+    for u in graph.users:
+        print 'est. bias', u.bias, 'true bias', u.true_bias
     if do_plots:
         plot_graph(graph, ws, w_vs_e, s_vs_e, s_vs_ts)
     return r
@@ -419,7 +447,22 @@ class test_reputation(unittest.TestCase):
         print 'hugo', g.get_user('hugo').variance
         print 'anna', g.get_user('anna').variance
 
+    def test_rep_2(self):
+        import user_model
+        import item_model
+        import graph_builder
+        N_USERS = 50
+        N_ITEMS = 50
+        N_REVIEWS = 6
+        users = [user_model.User(true_bias=2, true_precision=1.0)
+                 for u in range(N_USERS)]
+        for i in [0]:
+            users[i].true_bias = 0.0
+            users[i].prec = 0.000001
+            users[i].is_instructor = True
+        items = [item_model.Item(stdev=5.0) for i in range(N_ITEMS)]
+        graph = graph_builder.Graph(items, users, reviews=N_REVIEWS)
+        evaluate_items(graph, n_iterations=50)
 
 if __name__ == '__main__':
     unittest.main()
-    pass
