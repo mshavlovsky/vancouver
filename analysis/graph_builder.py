@@ -11,7 +11,8 @@ class Graph:
         self.n_reviews = reviews
         self.n_items = len(items)
         self.n_users = len(users)
-        
+        self.user_global_bias = 0
+
         # Builds a random graph.
         self.under_allocated_users = []
         self.under_allocated_items = []

@@ -21,8 +21,7 @@ class User:
         self.grade = {}
         # These are fake, used only for debugging.
         self.prec = 1.0
-        self.true_bias = 0.0
-        
+
     def add_item(self, it, grade):
         self.items.append(it)
         self.grade[it] = grade
@@ -49,6 +48,7 @@ class Graph:
         self.users = []
         self.user_dict = {}
         self.item_dict = {}
+        self.user_global_bias = 0
         
     def add_review(self, username, item_id, grade):
         # Gets, or creates, the user. 
@@ -212,7 +212,7 @@ def _propagate_from_users(graph):
                         biases.append(given_grade - other_grade)
                 u.bias = aggregate(biases, weights=weights)
             else:
-                u.bias = 0.0
+                u.bias = graph.user_global_bias
             # The grade is the grade given, de-biased. 
             msg.grade = u.grade[it] - u.bias
             # Estimates the standard deviation of the user, from the
@@ -273,7 +273,7 @@ def _aggregate_user_messages(graph):
                 biases.append(given_grade - other_grade)
             u.bias = aggregate(biases, weights=weights)
         else:
-            u.bias = 0.0
+            u.bias = graph.user_global_bias
         # Estimates the grade for each item.
         variance_estimates = []
         weights = []
@@ -284,7 +284,7 @@ def _aggregate_user_messages(graph):
         u.variance = aggregate(variance_estimates, weights=weights)
    
     
-def evaluate_items(graph, n_iterations=20, do_plots=False):
+def evaluate_items(graph, n_iterations=20, do_plots=False, true_grades=None):
     """Evaluates items using the reputation system iterations."""
     # Builds the initial messages from users to items. 
     for it in graph.items:
@@ -299,6 +299,12 @@ def evaluate_items(graph, n_iterations=20, do_plots=False):
     for i in range(n_iterations):
         _propagate_from_items(graph)
         _propagate_from_users(graph)
+        if not true_grades is None:
+            _aggregate_item_messages(graph)
+            biases = []
+            for it in true_grades:
+                biases.append(it.grade - true_grades[it])
+            graph.user_global_bias = np.average(biases)
     # Does the final aggregation step.
     r, ws, w_vs_e, s_vs_e, s_vs_ts = _aggregate_item_messages(graph)
     _aggregate_user_messages(graph)
@@ -418,6 +424,23 @@ class test_reputation(unittest.TestCase):
         print 'mike', g.get_user('mike').variance
         print 'hugo', g.get_user('hugo').variance
         print 'anna', g.get_user('anna').variance
+
+    def test_rep_2(self):
+        import user_model
+        import item_model
+        import graph_builder
+        N_USERS = 50
+        N_ITEMS = 50
+        N_REVIEWS = 6
+        users = [user_model.User(true_bias=2, true_precision=1.0)
+                 for u in range(N_USERS)]
+        items = [item_model.Item(stdev=5.0) for i in range(N_ITEMS)]
+        graph = graph_builder.Graph(items, users, reviews=N_REVIEWS)
+        true_grades = {}
+        for i in [0, 1, 2, 3, 4]:
+            true_grades[items[i]] = items[i].q
+        evaluate_items(graph, n_iterations=50, true_grades=true_grades)
+        print 'estimated global user bias', graph.user_global_bias
 
 
 if __name__ == '__main__':
